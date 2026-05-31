@@ -1,0 +1,5 @@
+google-genai>=0.3.0
+
+# Optional — only if you set LLM_PROVIDER to one of these in .env:
+# anthropic>=0.39.0
+# openai>=1.40.0

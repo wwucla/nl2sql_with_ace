@@ -1,0 +1,10 @@
+{"question": "How many customers are there?", "gold_sql": "SELECT COUNT(*) FROM customers;"}
+{"question": "How many customers are from Seattle?", "gold_sql": "SELECT COUNT(*) FROM customers WHERE city = 'Seattle';"}
+{"question": "List the names of customers in Seattle.", "gold_sql": "SELECT name FROM customers WHERE city = 'Seattle';"}
+{"question": "What is the name of the most expensive product?", "gold_sql": "SELECT name FROM products ORDER BY price DESC LIMIT 1;"}
+{"question": "How many completed orders are there?", "gold_sql": "SELECT COUNT(*) FROM orders WHERE status = 'completed';"}
+{"question": "What is the total revenue from completed orders?", "gold_sql": "SELECT SUM(oi.quantity * p.price) FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN orders o ON oi.order_id = o.id WHERE o.status = 'completed';"}
+{"question": "Which customer placed the most orders?", "gold_sql": "SELECT c.name FROM customers c JOIN orders o ON o.customer_id = c.id GROUP BY c.id ORDER BY COUNT(*) DESC LIMIT 1;"}
+{"question": "How many products are in the Office category?", "gold_sql": "SELECT COUNT(*) FROM products WHERE category = 'Office';"}
+{"question": "List the names of products that have never been ordered.", "gold_sql": "SELECT name FROM products WHERE id NOT IN (SELECT product_id FROM order_items);"}
+{"question": "What is the average price of Hardware products?", "gold_sql": "SELECT AVG(price) FROM products WHERE category = 'Hardware';"}

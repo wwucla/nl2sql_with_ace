@@ -1,0 +1,11 @@
+# Secrets — never commit
+.env
+
+# Runtime state (the learned playbook)
+playbook.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
