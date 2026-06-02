@@ -1,8 +1,9 @@
 # Secrets — never commit
 .env
 
-# Runtime state (the learned playbook)
+# Runtime state (the learned playbook and training checkpoint)
 playbook.json
+checkpoint.json
 
 # Python
 __pycache__/
