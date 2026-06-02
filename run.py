@@ -11,6 +11,7 @@ import os
 import sys
 
 from ace.db import build_db, run_sql, schema_text
+from ace.llm import CallBudgetExceeded
 from ace.loop import attempt, train
 from ace.playbook import Playbook
 from ace.roles import generate_sql
@@ -54,31 +55,41 @@ def main() -> None:
     conn, schema, tasks = setup()
     playbook = Playbook.load(PLAYBOOK_PATH)
 
-    if cmd == "train":
-        train(conn, schema, playbook, tasks, epochs=int(os.environ.get("EPOCHS", 2)))
-        playbook.save(PLAYBOOK_PATH)
-        print(f"\nSaved playbook -> {PLAYBOOK_PATH}")
+    try:
+        if cmd == "train":
+            try:
+                train(
+                    conn, schema, playbook, tasks,
+                    epochs=int(os.environ.get("EPOCHS", 2)),
+                )
+            finally:
+                # Save whatever was learned, even if the call budget cut us short.
+                playbook.save(PLAYBOOK_PATH)
+                print(f"\nSaved playbook -> {PLAYBOOK_PATH}")
 
-    elif cmd == "eval":
-        correct = sum(attempt(conn, schema, playbook, t)["correct"] for t in tasks)
-        print(f"accuracy {correct}/{len(tasks)} = {correct / len(tasks):.0%}")
+        elif cmd == "eval":
+            correct = sum(attempt(conn, schema, playbook, t)["correct"] for t in tasks)
+            print(f"accuracy {correct}/{len(tasks)} = {correct / len(tasks):.0%}")
 
-    elif cmd == "ask":
-        if len(sys.argv) < 3:
-            print('usage: python run.py ask "your question"')
-            return
-        sql = generate_sql(sys.argv[2], schema, playbook)
-        ok, rows = run_sql(conn, sql)
-        print(f"\nSQL:\n{sql}\n")
-        print("Result:" if ok else "Error:")
-        if ok:
-            for r in rows:
-                print(" ", r)
+        elif cmd == "ask":
+            if len(sys.argv) < 3:
+                print('usage: python run.py ask "your question"')
+                return
+            sql = generate_sql(sys.argv[2], schema, playbook)
+            ok, rows = run_sql(conn, sql)
+            print(f"\nSQL:\n{sql}\n")
+            print("Result:" if ok else "Error:")
+            if ok:
+                for r in rows:
+                    print(" ", r)
+            else:
+                print(" ", rows)
+
         else:
-            print(" ", rows)
+            print(__doc__)
 
-    else:
-        print(__doc__)
+    except CallBudgetExceeded as e:
+        print(f"\n[stopped] {e}")
 
 
 if __name__ == "__main__":

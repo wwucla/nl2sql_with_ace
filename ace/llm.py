@@ -7,10 +7,35 @@ so the ACE logic never needs to know who is serving tokens.
 import os
 
 DEFAULT_MODELS = {
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
     "anthropic": "claude-sonnet-4-6",
     "openai": "gpt-4o-mini",
 }
+
+# Hard cap on total LLM calls per process run, so an unattended train/eval can't
+# burn through quota. Override with the MAX_LLM_CALLS env var. Throttle + retry
+# are deliberately left for a later pass.
+DEFAULT_MAX_CALLS = 5
+_call_count = 0
+
+
+class CallBudgetExceeded(RuntimeError):
+    """Raised when the configured MAX_LLM_CALLS budget is exhausted."""
+
+
+def _max_calls() -> int:
+    return int(os.environ.get("MAX_LLM_CALLS", DEFAULT_MAX_CALLS))
+
+
+def call_count() -> int:
+    """Number of LLM calls made so far this run."""
+    return _call_count
+
+
+def reset_call_count() -> None:
+    """Reset the call counter (useful for tests or multi-run scripts)."""
+    global _call_count
+    _call_count = 0
 
 
 def _provider() -> str:
@@ -22,7 +47,20 @@ def _model() -> str:
 
 
 def complete(system: str, user: str) -> str:
-    """Return the model's text completion for a system + user prompt."""
+    """Return the model's text completion for a system + user prompt.
+
+    Counts against the per-run MAX_LLM_CALLS budget; raises CallBudgetExceeded
+    once it's exhausted.
+    """
+    global _call_count
+    limit = _max_calls()
+    if _call_count >= limit:
+        raise CallBudgetExceeded(
+            f"LLM call budget exhausted ({limit} calls); "
+            f"raise it via the MAX_LLM_CALLS env var."
+        )
+    _call_count += 1
+
     provider = _provider()
     if provider == "gemini":
         return _gemini(system, user)
