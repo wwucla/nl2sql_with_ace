@@ -26,14 +26,15 @@ class Playbook:
             return "(empty -- no strategies learned yet)"
         return "\n".join(f"- [{b.id}] {b.lesson}" for b in self.bullets)
 
+    def is_exact_dup(self, lesson: str) -> bool:
+        norm = lesson.strip().lower()
+        return any(b.lesson.lower() == norm for b in self.bullets)
+
     def add(self, lesson: str) -> bool:
         """Append a lesson as a delta. Returns False if it's an exact dup."""
         lesson = lesson.strip()
-        if not lesson:
+        if not lesson or self.is_exact_dup(lesson):
             return False
-        norm = lesson.lower()
-        if any(b.lesson.lower() == norm for b in self.bullets):
-            return False  # cheap collapse guard; upgrade to semantic dedup if needed
         self.bullets.append(Bullet(id=len(self.bullets) + 1, lesson=lesson))
         return True
 
