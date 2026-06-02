@@ -46,20 +46,22 @@ def _model() -> str:
     return os.environ.get("LLM_MODEL", DEFAULT_MODELS[_provider()])
 
 
-def complete(system: str, user: str) -> str:
+def complete(system: str, user: str, count: bool = True) -> str:
     """Return the model's text completion for a system + user prompt.
 
-    Counts against the per-run MAX_LLM_CALLS budget; raises CallBudgetExceeded
-    once it's exhausted.
+    Counts against the per-run MAX_LLM_CALLS budget by default; raises
+    CallBudgetExceeded once it's exhausted. Pass count=False for
+    infrastructure calls (e.g. dedup judges) that should not consume task quota.
     """
     global _call_count
-    limit = _max_calls()
-    if _call_count >= limit:
-        raise CallBudgetExceeded(
-            f"LLM call budget exhausted ({limit} calls); "
-            f"raise it via the MAX_LLM_CALLS env var."
-        )
-    _call_count += 1
+    if count:
+        limit = _max_calls()
+        if _call_count >= limit:
+            raise CallBudgetExceeded(
+                f"LLM call budget exhausted ({limit} calls); "
+                f"raise it via the MAX_LLM_CALLS env var."
+            )
+        _call_count += 1
 
     provider = _provider()
     if provider == "gemini":
